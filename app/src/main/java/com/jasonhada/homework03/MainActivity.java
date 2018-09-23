@@ -3,6 +3,7 @@ package com.jasonhada.homework03;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.DialogInterface;
+import android.os.AsyncTask;
 import android.os.Handler;
 import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
@@ -128,6 +129,12 @@ public class MainActivity extends AppCompatActivity {
         // ASYNC TASK
         Button async_btn = (Button) findViewById(R.id.async_btn);
 
+        async_btn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                new GeneratePasswordsAsync().execute();
+            }
+        });
     }
 
 
@@ -172,6 +179,62 @@ public class MainActivity extends AppCompatActivity {
             Message stopMessage = new Message();
             stopMessage.what = STATUS_STOP;
             handler.sendMessage(stopMessage);
+        }
+    }
+
+    class GeneratePasswordsAsync extends AsyncTask<CharSequence[], Integer, Integer> {
+        AlertDialog.Builder alert = new AlertDialog.Builder(MainActivity.this);
+        CharSequence[] passwords;
+
+        @Override
+        protected void onPreExecute() {
+            progressDialog = new ProgressDialog(MainActivity.this);
+            progressDialog.setMessage("Updating Progress");
+            progressDialog.setMax(100);
+            progressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+            progressDialog.setCancelable(false);
+            progressDialog.show();
+        }
+
+        @Override
+        protected void onPostExecute(Integer integer) {
+            progressDialog.dismiss();
+
+            final TextView password_set = findViewById(R.id.password_tv);
+
+            alert.setTitle("Passwords").setItems(passwords, new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    password_set.setText(passwords[which]);
+                }
+            });
+            alert.create();
+            alert.show();
+        }
+
+        @Override
+        protected void onProgressUpdate(Integer... values) {
+            progressDialog.setProgress(values[0]);
+        }
+
+        @Override
+        protected Integer doInBackground(CharSequence[]... strings) {
+            SeekBar count_sb = findViewById(R.id.passwordCount_sb);
+            SeekBar length_sb = findViewById(R.id.passwordLength_sb);
+
+            int count = count_sb.getProgress();
+            int length = length_sb.getProgress();
+
+            for (int i = 0; i <= 100; i ++){
+                for (int j = 0; j < count; j++){
+                    passwords = new CharSequence[count];
+                    String password = Util.getPassword(length);
+                    passwords[j] = password;
+                }
+                publishProgress(i);
+            }
+
+            return 0;
         }
     }
 }
