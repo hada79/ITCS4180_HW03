@@ -1,6 +1,8 @@
 package com.jasonhada.homework03;
 
+import android.app.AlertDialog;
 import android.app.ProgressDialog;
+import android.content.DialogInterface;
 import android.os.Handler;
 import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
@@ -16,13 +18,14 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class MainActivity extends AppCompatActivity {
-
     SeekBar passwordCount_sb, passwordLength_sb;
-    TextView passwordCount_tv, passwordLength_tv;
+    TextView passwordCount_tv, passwordLength_tv, password_tv;
 
     ExecutorService threadPool;
     Handler handler;
     ProgressDialog progressDialog;
+
+    CharSequence[] passwords;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -87,6 +90,16 @@ public class MainActivity extends AppCompatActivity {
         progressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
         progressDialog.setCancelable(false);
 
+        final TextView password = findViewById(R.id.password_tv);
+
+        final AlertDialog.Builder alert = new AlertDialog.Builder(this);
+        alert.setTitle("Passwords").setItems(passwords, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                password.setText(passwords[which]);
+            }
+        });
+
         handler = new Handler(new Handler.Callback() {
             @Override
             public boolean handleMessage(Message msg) {
@@ -100,6 +113,7 @@ public class MainActivity extends AppCompatActivity {
                     case GeneratePasswords.STATUS_STOP:
                         progressDialog.dismiss();
                         Log.d("demo", "Message stopping ... ");
+                        alert.show();
                         break;
                     case GeneratePasswords.STATUS_PROGRESS:
                         progressDialog.setProgress(msg.getData().getInt(GeneratePasswords.PROGRESS_KEY));
@@ -137,7 +151,12 @@ public class MainActivity extends AppCompatActivity {
             startMessage.what = STATUS_START;
             handler.sendMessage(startMessage);
 
-            for (int i=0; i < count; i++) {
+            for (int i=0; i <= 100; i++) {
+                passwords = new CharSequence[count];
+                String password = Util.getPassword(length);
+                for (int j = 0; j < count; j++) {
+                    passwords[j] = password;
+                }
 
                 Util.getPassword(length);
 
