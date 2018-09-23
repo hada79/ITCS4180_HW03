@@ -163,12 +163,10 @@ public class MainActivity extends AppCompatActivity {
             startMessage.what = STATUS_START;
             handler.sendMessage(startMessage);
 
-            Log.d("demo", count + " passwords to be generated.");
             // this loops for the number of passwords that need to be created.
             for (int i=0; i<count; i++) {
                 String password = Util.getPassword(length);
 
-                Log.d("demo", "Generated password "+ password);
                 passwords[i] = password;
 
                 // message to handler to notify progress
@@ -191,8 +189,8 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    class GeneratePasswordsAsync extends AsyncTask<CharSequence[], Integer, Integer> {
-        AlertDialog.Builder alert = new AlertDialog.Builder(MainActivity.this);
+    class GeneratePasswordsAsync extends AsyncTask<CharSequence[], Integer, String[]> {
+
         CharSequence[] passwords;
 
         @Override
@@ -206,44 +204,47 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @Override
-        protected void onPostExecute(Integer integer) {
-            progressDialog.dismiss();
-
-            final TextView password_set = findViewById(R.id.password_tv);
-
-            alert.setTitle("Passwords").setItems(passwords, new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialog, int which) {
-                    password_set.setText(passwords[which]);
-                }
-            });
-            alert.create();
-            alert.show();
-        }
-
-        @Override
         protected void onProgressUpdate(Integer... values) {
             progressDialog.setProgress(values[0]);
         }
 
         @Override
-        protected Integer doInBackground(CharSequence[]... strings) {
+        protected String[] doInBackground(CharSequence[]... strings) {
             SeekBar count_sb = findViewById(R.id.passwordCount_sb);
             SeekBar length_sb = findViewById(R.id.passwordLength_sb);
 
-            int count = count_sb.getProgress();
-            int length = length_sb.getProgress();
+            int count = count_sb.getProgress() + 1 ;
+            int length = length_sb.getProgress() + 8;
 
-            for (int i = 0; i <= 100; i ++){
-                for (int j = 0; j < count; j++){
-                    passwords = new CharSequence[count];
-                    String password = Util.getPassword(length);
-                    passwords[j] = password;
-                }
-                publishProgress(i);
+            String [] passwords = new String[count];
+
+            for (int i = 0; i < count; i ++){
+
+                String password = Util.getPassword(length);
+                passwords[i] = password;
+
+                int progress = (int) ((i+1) * 100.0f / count);
+                publishProgress(progress);
             }
 
-            return 0;
+            return passwords;
+        }
+
+        @Override
+        protected void onPostExecute(final String[] passwords) {
+            progressDialog.dismiss();
+
+            final TextView password_set = findViewById(R.id.password_tv);
+
+            AlertDialog.Builder alert = new AlertDialog.Builder(MainActivity.this)
+                    .setTitle("Select a password")
+                    .setItems(passwords, new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            password_set.setText(passwords[which]);
+                        }
+                    });
+            alert.show();
         }
     }
 }
