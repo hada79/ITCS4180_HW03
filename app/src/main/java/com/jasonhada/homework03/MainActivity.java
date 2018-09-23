@@ -15,6 +15,7 @@ import android.widget.ProgressBar;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
+import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -25,8 +26,6 @@ public class MainActivity extends AppCompatActivity {
     ExecutorService threadPool;
     Handler handler;
     ProgressDialog progressDialog;
-
-    CharSequence[] passwords;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -85,41 +84,46 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        progressDialog = new ProgressDialog(this);
-        progressDialog.setMessage("Updating Progress");
-        progressDialog.setMax(100);
-        progressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
-        progressDialog.setCancelable(false);
-
         final TextView password = findViewById(R.id.password_tv);
-
-        final AlertDialog.Builder alert = new AlertDialog.Builder(this);
-        alert.setTitle("Passwords").setItems(passwords, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                password.setText(passwords[which]);
-            }
-        });
 
         handler = new Handler(new Handler.Callback() {
             @Override
             public boolean handleMessage(Message msg) {
 
                 switch(msg.what) {
+
                     case GeneratePasswords.STATUS_START:
+                        progressDialog = new ProgressDialog(MainActivity.this);
+                        progressDialog.setMessage("Updating Progress");
+                        progressDialog.setMax(100);
+                        progressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+                        progressDialog.setCancelable(false);
                         progressDialog.setProgress(0);
                         progressDialog.show();
-                        Log.d("demo", "Message starting ... ");
                         break;
+
+                    case GeneratePasswords.STATUS_PROGRESS:
+
+                        int progress = msg.getData().getInt(GeneratePasswords.PROGRESS_KEY);
+                        progressDialog.setProgress(progress);
+                        break;
+
                     case GeneratePasswords.STATUS_STOP:
+
                         progressDialog.dismiss();
-                        Log.d("demo", "Message stopping ... ");
+                        final String[] passwords = msg.getData().getStringArray("passwords");
+
+                        AlertDialog.Builder alert = new AlertDialog.Builder(MainActivity.this)
+                            .setTitle("Select a password")
+                            .setItems(passwords, new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    password.setText(passwords[which]);
+                            }
+                        });
                         alert.show();
                         break;
-                    case GeneratePasswords.STATUS_PROGRESS:
-                        progressDialog.setProgress(msg.getData().getInt(GeneratePasswords.PROGRESS_KEY));
-                        Log.d("demo", "Message progress ... " + msg.getData().getInt(GeneratePasswords.PROGRESS_KEY));
-                        break;
+
                 }
                 return false;
             }
@@ -154,33 +158,39 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void run() {
 
+            String[] passwords = new String[count];
             Message startMessage = new Message();
             startMessage.what = STATUS_START;
             handler.sendMessage(startMessage);
 
-            for (int i=0; i <= 100; i++) {
-                passwords = new CharSequence[count];
+            Log.d("demo", count + " passwords to be generated.");
+            // this loops for the number of passwords that need to be created.
+            for (int i=0; i<count; i++) {
                 String password = Util.getPassword(length);
-                for (int j = 0; j < count; j++) {
-                    passwords[j] = password;
-                }
 
-                Util.getPassword(length);
+                Log.d("demo", "Generated password "+ password);
+                passwords[i] = password;
 
+                // message to handler to notify progress
                 Message message = new Message();
                 message.what = STATUS_PROGRESS;
-                message.obj = i;
                 Bundle bundle = new Bundle();
-                bundle.putInt(PROGRESS_KEY, i);
+                int progress = (int) ((i+1) * 100.0f / count);
+                bundle.putInt(PROGRESS_KEY, progress);
                 message.setData(bundle);
                 handler.sendMessage(message);
             }
 
+            // message to handler when complete with passwords
             Message stopMessage = new Message();
             stopMessage.what = STATUS_STOP;
+            Bundle bundle = new Bundle();
+            bundle.putStringArray("passwords", passwords);
+            stopMessage.setData(bundle);
             handler.sendMessage(stopMessage);
         }
     }
+
     class GeneratePasswordsAsync extends AsyncTask<CharSequence[], Integer, Integer> {
         AlertDialog.Builder alert = new AlertDialog.Builder(MainActivity.this);
         CharSequence[] passwords;
